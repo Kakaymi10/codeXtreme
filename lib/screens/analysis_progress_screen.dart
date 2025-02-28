@@ -21,6 +21,7 @@ class _AnalysisProgressScreenState extends State<AnalysisProgressScreen>
 
   final AnalysisService _analysisService = AnalysisService();
   double _progress = 0.68; // Initial progress value
+  bool _isAnalysisComplete = false;
 
   @override
   void initState() {
@@ -52,6 +53,11 @@ class _AnalysisProgressScreenState extends State<AnalysisProgressScreen>
           ),
         );
         _animationController.forward(from: 0.0);
+
+        // Check if analysis is complete
+        if (progress >= 1.0) {
+          _isAnalysisComplete = true;
+        }
       });
     });
 
@@ -107,17 +113,22 @@ class _AnalysisProgressScreenState extends State<AnalysisProgressScreen>
             child: const BackButton(),
             behavior: HitTestBehavior.opaque,
           ),
-          const Expanded(
+          Expanded(
             child: Center(
               child: Text(
-                'Analysis in Progress',
-                style: TextStyle(
+                _isAnalysisComplete
+                    ? 'Analysis Complete'
+                    : 'Analysis in Progress',
+                style: const TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 18,
                   fontWeight: FontWeight.w500,
                   color: Colors.black,
                 ),
-                semanticsLabel: 'Analysis in Progress Screen',
+                semanticsLabel:
+                    _isAnalysisComplete
+                        ? 'Analysis Complete Screen'
+                        : 'Analysis in Progress Screen',
               ),
             ),
           ),
@@ -138,7 +149,8 @@ class _AnalysisProgressScreenState extends State<AnalysisProgressScreen>
         const SizedBox(height: 32),
         _buildAnalysisBox(),
         const SizedBox(height: 32),
-        _buildProcessingStatus(),
+        if (!_isAnalysisComplete) _buildProcessingStatus(),
+        _buildResultsButton(),
       ],
     );
   }
@@ -166,6 +178,7 @@ class _AnalysisProgressScreenState extends State<AnalysisProgressScreen>
               : MediaQuery.of(context).size.width - 32,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -180,31 +193,14 @@ class _AnalysisProgressScreenState extends State<AnalysisProgressScreen>
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: Image.network(
-        'https://cdn.builder.io/api/v1/image/assets/TEMP/120f55dcb85593bdcc81db7f3d0f57e561c8294a',
-        fit: BoxFit.cover,
-        semanticLabel: 'Medical scan image',
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Center(
-            child: CircularProgressIndicator(
-              value:
-                  loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                          loadingProgress.expectedTotalBytes!
-                      : null,
-              color: const Color(0xFF4F46E5),
-            ),
-          );
-        },
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            color: Colors.grey[300],
-            child: const Center(
-              child: Icon(Icons.broken_image, color: Colors.grey, size: 64),
-            ),
-          );
-        },
+      child: Center(
+        // Use a blood cell icon instead of a funnel
+        child: Image.asset(
+          'assets/images/blood_sample.jpg',
+          width: double.infinity,
+          height: 300,
+          fit: BoxFit.cover,
+        ),
       ),
     );
   }
@@ -279,6 +275,33 @@ class _AnalysisProgressScreenState extends State<AnalysisProgressScreen>
         const SizedBox(width: 4),
         const LoadingDots(color: Color(0xFF4F46E5), size: 8, spacing: 4),
       ],
+    );
+  }
+
+  Widget _buildResultsButton() {
+    // Only show the button when progress is complete or nearly complete
+    if (_progress < 0.95) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 32.0),
+      child: ElevatedButton(
+        onPressed: () {
+          Navigator.pushNamed(context, '/results_summary');
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF4F46E5),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: const Text(
+          'View Results',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
+        ),
+      ),
     );
   }
 }

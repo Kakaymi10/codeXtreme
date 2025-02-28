@@ -19,6 +19,14 @@ class ProgressCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Determine status text based on progress
+    String statusText = 'Analyzing';
+    if (progress >= 1.0) {
+      statusText = 'Complete';
+    } else if (progress >= 0.75) {
+      statusText = 'Almost done';
+    }
+
     return SizedBox(
       width: size,
       height: size,
@@ -50,7 +58,7 @@ class ProgressCircle extends StatelessWidget {
               ),
               SizedBox(height: size * 0.04167), // 8px for size 192
               Text(
-                'Analyzing',
+                statusText,
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: size * 0.07292, // 14px for size 192
