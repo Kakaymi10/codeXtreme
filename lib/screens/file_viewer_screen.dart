@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import '../services/supabase_config.dart';
 
 class FileViewerScreen extends StatefulWidget {
@@ -15,6 +18,9 @@ class FileViewerScreen extends StatefulWidget {
 
 class _FileViewerScreenState extends State<FileViewerScreen> {
   final SupabaseClient _supabase = SupabaseConfig.client;
+
+  // Cache for segmented images
+  static final Map<String, String> _segmentedImageCache = {};
 
   // File properties
   String? _filePath;
@@ -33,6 +39,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
   // Processing states
   bool _isEnhanced = false;
   bool _isSegmented = false;
+  String? _segmentedImageUrl; // To store the segmented image URL
 
   @override
   void initState() {
@@ -64,6 +71,17 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
 
     if (_isVideo) {
       _initializeVideoPlayer();
+    } else {
+      // Check if we already have a segmented version of this image
+      _checkForCachedSegmentedImage();
+    }
+  }
+
+  void _checkForCachedSegmentedImage() {
+    if (_fileUrl != null && _segmentedImageCache.containsKey(_fileUrl)) {
+      print('Using cached segmented image for: $_fileUrl');
+      // We have a cached segmented image, but don't auto-toggle to it
+      _segmentedImageUrl = _segmentedImageCache[_fileUrl];
     }
   }
 
@@ -119,6 +137,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
   Future<void> _toggleSegment() async {
     if (_isProcessing) return;
 
+    // If already segmented, toggle back to original image
     if (_isSegmented) {
       setState(() {
         _isSegmented = false;
@@ -131,31 +150,137 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
     });
 
     try {
-      // Simulating image segmentation processing
-      await Future.delayed(const Duration(seconds: 2));
+      // Check if we have a cached version first
+      if (_fileUrl != null && !_isVideo) {
+        if (_segmentedImageCache.containsKey(_fileUrl)) {
+          // Use cached version
+          setState(() {
+            _segmentedImageUrl = _segmentedImageCache[_fileUrl];
+            _isSegmented = true;
+            _isProcessing = false;
+          });
+          print('Using cached segmented image: $_segmentedImageUrl');
+          return;
+        }
 
-      setState(() {
-        _isSegmented = true;
-        _isProcessing = false;
-      });
+        // If not cached, make API call
+        final segmentedImage = await _segmentImageWithApi(_fileUrl!);
+
+        if (segmentedImage != null) {
+          // Cache the result
+          _segmentedImageCache[_fileUrl!] = segmentedImage;
+
+          setState(() {
+            _segmentedImageUrl = segmentedImage;
+            _isSegmented = true;
+          });
+        } else {
+          throw Exception('Failed to segment image');
+        }
+      } else {
+        throw Exception('No valid image URL to process');
+      }
     } catch (e) {
-      setState(() {
-        _isProcessing = false;
-      });
-
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ).showSnackBar(SnackBar(content: Text('Segmentation error: $e')));
+    } finally {
+      setState(() {
+        _isProcessing = false;
+      });
+    }
+  }
+
+  Future<String?> _segmentImageWithApi(String imageUrl) async {
+    try {
+      // Step 1: Download the image from the URL
+      print('Downloading image from: $imageUrl');
+      final response = await http.get(Uri.parse(imageUrl));
+      if (response.statusCode != 200) {
+        throw Exception('Failed to download image: ${response.statusCode}');
+      }
+
+      print(
+        'Successfully downloaded image: ${response.bodyBytes.length} bytes',
+      );
+      final imageBytes = response.bodyBytes;
+
+      // Step 2: Create a multipart request to the segment API
+      // When running on an emulator, 10.0.2.2 points to the host machine's localhost
+      // For a physical device, use your computer's actual IP address on the network
+      final apiUrl =
+          kIsWeb
+              ? 'http://localhost:8000/segment/auto'
+              : 'http://10.0.2.2:8000/segment/auto';
+
+      var request = http.MultipartRequest('POST', Uri.parse(apiUrl))
+        ..files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            imageBytes,
+            filename: _fileName ?? 'image.jpg',
+          ),
+        );
+
+      // Step 3: Send the request and get the response
+      print('Sending request to API: ${request.url}');
+
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 120),
+        onTimeout: () {
+          throw Exception('API request timed out after 120 seconds');
+        },
+      );
+      print(
+        'Received API response with status: ${streamedResponse.statusCode}',
+      );
+
+      final apiResponse = await http.Response.fromStream(streamedResponse);
+
+      if (apiResponse.statusCode != 200) {
+        print('API error response: ${apiResponse.body}');
+        throw Exception('API returned status code ${apiResponse.statusCode}');
+      }
+
+      print(
+        'Successfully received segmented image: ${apiResponse.bodyBytes.length} bytes',
+      );
+
+      // Step 4: Save the segmented image to a persistent directory
+      final appDir = await getApplicationDocumentsDirectory();
+      final fileName =
+          'segmented_${_patientId ?? ''}_${_fileName ?? DateTime.now().millisecondsSinceEpoch}.png';
+      final filePath = '${appDir.path}/$fileName';
+      final tempFile = File(filePath);
+      await tempFile.writeAsBytes(apiResponse.bodyBytes);
+
+      print('Saved segmented image to: $filePath');
+      return filePath;
+    } catch (e) {
+      print('Error in segmentation: $e');
+      return null;
     }
   }
 
   void _analyzeResults() {
+    // Determine which file URL to use
+    String? fileToAnalyze = _fileUrl;
+
+    if (_isSegmented && _segmentedImageUrl != null) {
+      // If we have a segmented image, use that for analysis
+      fileToAnalyze =
+          _segmentedImageUrl!.startsWith('http')
+              ? _segmentedImageUrl
+              : _segmentedImageUrl;
+      print('Using segmented image for analysis: $fileToAnalyze');
+    }
+
     // Navigate to the analysis screen
     Navigator.pushNamed(
       context,
       '/analysis',
       arguments: {
-        'fileUrl': _fileUrl,
+        'fileUrl': fileToAnalyze,
         'isEnhanced': _isEnhanced,
         'isSegmented': _isSegmented,
         'patientId': _patientId,
@@ -201,8 +326,22 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
         return const Center(child: CircularProgressIndicator());
       }
     } else {
-      // For images
-      if (_fileUrl != null) {
+      // For images - show segmented image if available
+      if (_isSegmented && _segmentedImageUrl != null) {
+        if (_segmentedImageUrl!.startsWith('http')) {
+          return CachedNetworkImage(
+            imageUrl: _segmentedImageUrl!,
+            placeholder:
+                (context, url) =>
+                    const Center(child: CircularProgressIndicator()),
+            errorWidget: (context, url, error) => const Icon(Icons.error),
+            fit: BoxFit.contain,
+          );
+        } else {
+          // For local file path
+          return Image.file(File(_segmentedImageUrl!), fit: BoxFit.contain);
+        }
+      } else if (_fileUrl != null) {
         return CachedNetworkImage(
           imageUrl: _fileUrl!,
           placeholder:
@@ -325,6 +464,16 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
                       ],
                     ),
                   ),
+                  if (_segmentedImageCache.containsKey(_fileUrl) &&
+                      !_isSegmented)
+                    Tooltip(
+                      message: 'Segmented version available',
+                      child: Icon(
+                        Icons.check_circle,
+                        color: Colors.green[600],
+                        size: 16,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -368,10 +517,17 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
                     Expanded(
                       child: _buildToggleButton(
                         icon: Icons.segment,
-                        label: 'Segment',
+                        label:
+                            _segmentedImageCache.containsKey(_fileUrl) &&
+                                    !_isSegmented
+                                ? 'Show Segmented'
+                                : 'Segment',
                         isActive: _isSegmented,
-                        onPressed: _toggleSegment,
+                        onPressed: _isVideo ? null : _toggleSegment,
                         activeColor: Colors.purple,
+                        hasCache:
+                            _segmentedImageCache.containsKey(_fileUrl) &&
+                            !_isSegmented,
                       ),
                     ),
                   ],
@@ -423,8 +579,9 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
     required IconData icon,
     required String label,
     required bool isActive,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
     required Color activeColor,
+    bool hasCache = false,
   }) {
     return Material(
       color: Colors.transparent,
@@ -437,7 +594,12 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
             color: isActive ? activeColor.withOpacity(0.1) : Colors.grey[100],
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isActive ? activeColor : Colors.grey[300]!,
+              color:
+                  isActive
+                      ? activeColor
+                      : hasCache
+                      ? Colors.green
+                      : Colors.grey[300]!,
               width: 1,
             ),
           ),
@@ -445,16 +607,33 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                icon,
+                hasCache ? Icons.cached : icon,
                 size: 18,
-                color: isActive ? activeColor : Colors.grey[600],
+                color:
+                    isActive
+                        ? activeColor
+                        : hasCache
+                        ? Colors.green
+                        : onPressed == null
+                        ? Colors.grey[400]
+                        : Colors.grey[600],
               ),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: TextStyle(
-                  color: isActive ? activeColor : Colors.grey[700],
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                  color:
+                      isActive
+                          ? activeColor
+                          : hasCache
+                          ? Colors.green
+                          : onPressed == null
+                          ? Colors.grey[400]
+                          : Colors.grey[700],
+                  fontWeight:
+                      isActive || hasCache
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                 ),
               ),
             ],
