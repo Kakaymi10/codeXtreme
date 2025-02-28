@@ -4,6 +4,8 @@ class ScanResult {
   final String type;
   final String date;
   final Map<String, dynamic> results;
+  // You're missing this property but trying to set it
+  final String? result;
 
   ScanResult({
     required this.id,
@@ -11,6 +13,7 @@ class ScanResult {
     required this.type,
     required this.date,
     required this.results,
+    this.result, // Make it optional with no 'required' keyword
   });
 
   factory ScanResult.fromJson(Map<String, dynamic> json) {
@@ -20,6 +23,7 @@ class ScanResult {
       type: json['type'] ?? '',
       date: json['date'] ?? '',
       results: json['results'] ?? {},
+      result: json['result'],
     );
   }
 
@@ -30,6 +34,7 @@ class ScanResult {
       'type': type,
       'date': date,
       'results': results,
+      'result': result,
     };
   }
 }
