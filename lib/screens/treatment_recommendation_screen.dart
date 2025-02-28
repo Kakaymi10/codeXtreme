@@ -1,119 +1,121 @@
-// treatment_recommendation_screen.dart
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../widgets/pathogen_card.dart' as pathogen;
+import '../widgets/treatment_card.dart' as treatment;
+import '../widgets/patient_info_card.dart';
+import '../widgets/custom_tab_bar.dart';
+import '../widgets/app_footer.dart';
 
-class TreatmentRecommendationScreen extends StatelessWidget {
+class TreatmentRecommendationScreen extends StatefulWidget {
   const TreatmentRecommendationScreen({Key? key}) : super(key: key);
+
+  @override
+  State<TreatmentRecommendationScreen> createState() =>
+      _TreatmentRecommendationScreenState();
+}
+
+class _TreatmentRecommendationScreenState
+    extends State<TreatmentRecommendationScreen> {
+  int _selectedTabIndex = 0;
+
+  void _onTabSelected(int index) {
+    setState(() {
+      _selectedTabIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Treatment Recommendations'),
-        backgroundColor: Colors.blue[800],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Based on your sample analysis',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Recommended Actions',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 24),
-            _buildRecommendationCard(
-              title: 'Primary Care Follow-up',
-              description:
-                  'Schedule an appointment with your primary care provider within 7 days',
-              icon: Icons.calendar_today,
-              color: Colors.blue,
-            ),
-            const SizedBox(height: 16),
-            _buildRecommendationCard(
-              title: 'Medication Adjustment',
-              description:
-                  'Review current medication schedule with your doctor',
-              icon: Icons.medical_services,
-              color: Colors.green,
-            ),
-            const SizedBox(height: 16),
-            _buildRecommendationCard(
-              title: 'Dietary Changes',
-              description:
-                  'Increase fluid intake and reduce sodium consumption',
-              icon: Icons.restaurant,
-              color: Colors.orange,
-            ),
-            const SizedBox(height: 32),
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/results_summary');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[800],
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
+      body: SafeArea(
+        child: Container(
+          color: const Color(0xFFF9FAFB),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                height: 56,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
                   ),
                 ),
-                child: const Text('View Full Results'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecommendationCard({
-    required String title,
-    required String description,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Back button
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Color(0xFF4B5563),
+                        size: 20,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                      tooltip: 'Go back',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    description,
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                  ),
-                ],
+                    // Title
+                    Text(
+                      'Treatment Information',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                      semanticsLabel: 'Treatment Information page',
+                    ),
+                    // Share button
+                    IconButton(
+                      icon: const Icon(
+                        Icons.share,
+                        color: Color(0xFF4B5563),
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Share functionality coming soon'),
+                          ),
+                        );
+                      },
+                      tooltip: 'Share information',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+
+              // Tab Bar
+              CustomTabBar(
+                selectedIndex: _selectedTabIndex,
+                onTabSelected: _onTabSelected,
+                tabs: const ['Treatment', 'Education'],
+              ),
+
+              // Content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      pathogen.PathogenCard(),
+                      const SizedBox(height: 16),
+                      treatment.TreatmentCard(),
+                      const SizedBox(height: 16),
+                      const PatientInfoCard(),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Footer
+              const AppFooter(),
+            ],
+          ),
         ),
       ),
     );

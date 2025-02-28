@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/blood_sample_camera_screen.dart';
 import 'screens/analysis_progress_screen.dart';
-import 'screens/results_summary_screen.dart'; // Import the results summary screen
-// Import future screens when they're created
-// import 'screens/treatment_recommendation_screen.dart';
+import 'screens/results_summary_screen.dart';
+import 'screens/treatment_recommendation_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -36,10 +35,8 @@ class MyApp extends StatelessWidget {
         '/blood_camera': (context) => const BloodSampleCameraScreen(),
         '/analysis_progress': (context) => const AnalysisProgressScreen(),
         '/results_summary': (context) => const ResultsScreen(),
-        // Routes for future screens
         '/treatment_recommendation':
-            (context) =>
-                const Placeholder(), // Replace with actual screen when created
+            (context) => const TreatmentRecommendationScreen(),
       },
     );
   }
