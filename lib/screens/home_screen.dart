@@ -6,7 +6,7 @@ import '../widgets/sample_type_button.dart';
 import '../widgets/status_indicator.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({Key? key}) : super(key: key);
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -17,7 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<ScanResult> _scanResults = [];
   bool _isLoading = false;
   String _error = '';
-  final bool _isOffline = false;
+  bool _isOffline = false;
 
   @override
   void initState() {
@@ -42,6 +42,35 @@ class _HomeScreenState extends State<HomeScreen> {
         _error = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  // Navigate to the appropriate screen based on sample type
+  void _navigateToSampleScreen(String sampleType) {
+    switch (sampleType.toLowerCase()) {
+      case 'blood':
+        Navigator.pushNamed(context, '/blood_camera');
+        break;
+      case 'urine':
+        // For now just show a message, will be updated when the screen is available
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Urine sample screen coming soon')),
+        );
+        break;
+      case 'stool':
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Stool sample screen coming soon')),
+        );
+        break;
+      case 'sputum':
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sputum sample screen coming soon')),
+        );
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Screen not implemented yet')),
+        );
     }
   }
 
@@ -118,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     child: SampleTypeButton(
                                       sampleType: SampleType.blood(),
                                       onTap: () {
-                                        // Handle blood sample selection
+                                        _navigateToSampleScreen('blood');
                                       },
                                     ),
                                   ),
@@ -127,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     child: SampleTypeButton(
                                       sampleType: SampleType.urine(),
                                       onTap: () {
-                                        // Handle urine sample selection
+                                        _navigateToSampleScreen('urine');
                                       },
                                     ),
                                   ),
@@ -140,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     child: SampleTypeButton(
                                       sampleType: SampleType.stool(),
                                       onTap: () {
-                                        // Handle stool sample selection
+                                        _navigateToSampleScreen('stool');
                                       },
                                     ),
                                   ),
@@ -149,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     child: SampleTypeButton(
                                       sampleType: SampleType.sputum(),
                                       onTap: () {
-                                        // Handle sputum sample selection
+                                        _navigateToSampleScreen('sputum');
                                       },
                                     ),
                                   ),
@@ -224,6 +253,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                         _getScanIcon(scan.type),
                                         color: _getScanColor(scan.type),
                                       ),
+                                      onTap: () {
+                                        // Navigate to results summary when tapping a scan result
+                                        Navigator.pushNamed(
+                                          context,
+                                          '/results_summary',
+                                        );
+                                      },
                                     );
                                   },
                                 ),
