@@ -74,7 +74,7 @@ We welcome contributions! To contribute:
 4. Push to the branch: `git push origin feature-branch`
 5. Open a Pull Request.
 
-## The pitch deck
+## The Pitch Deck
 https://www.canva.com/design/DAGgbSxvtzA/MogEsr5lGEsO7mEgY6Av7g/edit?utm_content=DAGgbSxvtzA&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
 
 ## Team Members
