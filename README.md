@@ -78,7 +78,7 @@ We welcome contributions! To contribute:
 https://www.canva.com/design/DAGgbSxvtzA/MogEsr5lGEsO7mEgY6Av7g/edit?utm_content=DAGgbSxvtzA&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
 
 ## Team Members
-- **[Moussa Moustapha]** - Mobile Developer & CEO
+- **[Moussa Moustapha]** - Mobile Developer
 - **[Elvis Kinyua]** - Mobile Developer
 - **[Flore Obedine]** - Project Coordinator
 - **[Jamillah Ssozi]** - Data Science & Research Analyst
