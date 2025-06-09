@@ -1,4 +1,4 @@
-# MultiScan AI: Click here to acces the backend repository(#https://github.com/Kakaymi10/backend.git)
+# MultiScan AI: Click here to acces the backend repository(https://github.com/Kakaymi10/backend.git)
 
 ## Table of Contents
 1. [Overview](#overview)
